@@ -1,0 +1,30 @@
+usage              = "classify"  #["build", "target", "classify", "test"] 
+output_directory   = 'RB_out'
+log_directory      = 'RB_out/logs'
+
+
+[IBF]
+kmer_size          = 15         #(unsigned integer with default 13) only required for 'usage = "build"' or if target_file/deplete_file is a fasta formate file 
+fragment_size      = 200000     #(unsigned integer with default 100000)  only required for 'usage = "build" or if target_file/deplete_file is a fasta formate file 
+threads            = 3          #(unsigned integer with default 3)
+#target_files       = ['/mnt/c/ReadBouncerToml/build/main/Release/Listeria_monocytogenes_ATCC_19115_.fasta','/mnt/c/ReadBouncerToml/build/main/Release/Pseudomonas_aeruginosa_complete_genome.fasta']
+deplete_files      = ['/media/jens/INTENSO/Plasmide/Genomes/44613_chromosome.fasta'] #'D:/Plasmide/Genomes/44613_chromosome.fasta'] #'/media/jens/INTENSO/Plasmide/Genomes/44613_chromosome.fasta']
+read_files         = ['/media/jens/INTENSO/Plasmide/Data/20220324_1028_MN24598_FAR92672_9a263022/fastq/44613_unblocked_plasmid.fastq']#'D:/Plasmide/Data/20220420_1351_MN24598_FAP84921_7d466390/fastq/44613_unblocked_plasmid.fastq'] #'/media/jens/INTENSO/Plasmide/Data/20220420_1351_MN24598_FAP84921_7d466390/fastq/44613_unblocked_plasmid.fastq']
+exp_seq_error_rate = 0.05        #(unsigned float between 0 and 1 default 0.1)
+chunk_length       = 300        #(unsigned integer with default 250)
+max_chunks         = 5          #(unsigned integer with default 5)
+
+
+[MinKNOW]
+host               = "localhost" #(ip address or name of the computer hosting MinKNOW)
+port               = "9501"      #(port number used fo grpc communication by by MinKNOW instance)
+flowcell           = "MS00000"   #(name of the flowcell used)
+channels           = [1,512]
+
+
+[Basecaller]
+caller             = "DeepNano" #DeepNano/Guppy (default is DeepNano)
+host               = "127.0.0.1"#(ip address or name of the computer hosting Guppy Basecall Server)
+port               = "9501"     #(port number on which the basecall server is running on the host)
+threads            = 3          # (unsigned integer with default 3)
+config             = "dna_r9.4.1_450bps_fast"
