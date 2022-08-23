@@ -137,10 +137,31 @@ create_ef_plots <- function(rb_cov, mk_cov, output_file)
   
   ef <- bind_rows(rb_cov, mk_cov)
   
+  
+  ef <- ef %>%
+    mutate(experiment = 
+             case_when(experiment == "FAR91003" ~ "ReadBouncer1",
+                       experiment == "FAR92672" ~ "ReadBouncer2",
+                       experiment == "FAR92750" ~ "MinKNOW1",
+                       experiment == "FAP84921" ~ "MinKNOW2",
+                       TRUE ~ experiment)
+          ) %>%
+    mutate(Species = 
+             case_when(Species == "Campylobacter coli" ~ "C. coli",
+                       Species == "Campylobacter jejuni" ~ "C. jejuni",
+                       Species == "Salmonella enterica" ~ "S. enterica",
+                       Species == "Klebsiella pneumoniae" ~ "K. pneumoniae",
+                       Species == "Enterobacter hormaechei" ~ "E. hormaechei",
+                       TRUE ~ Species)
+    )
+  
+  
   sort <- ef %>%
     select(experiment, date) %>%
     filter(!duplicated(.)) %>%
     arrange(date)
+  
+  
   
   ef_yield <- ggplot(ef, aes(x=timepoint, y=efactor_bases, group=Species)) +
     theme_minimal()+
@@ -155,7 +176,7 @@ create_ef_plots <- function(rb_cov, mk_cov, output_file)
     theme(plot.title.position = "plot")+
     theme(legend.position = "none")+
     #theme(legend.title = element_blank())+
-    facet_nested(~ tool + factor(experiment, levels = sort$experiment))+
+    facet_nested(~ factor(experiment, levels = sort$experiment))+
     theme(strip.text.x = element_text(size = 8, face="bold"))+
     theme(strip.text.y = element_text(size = 8, face="bold"))+
     theme(strip.background=element_rect(color="grey30"))
@@ -175,7 +196,7 @@ create_ef_plots <- function(rb_cov, mk_cov, output_file)
     theme(plot.title.position = "plot")+
     theme(legend.position = "none")+
     #theme(legend.title = element_blank())+
-    facet_nested(~ tool + factor(experiment, levels = sort$experiment))+
+    facet_nested(~ factor(experiment, levels = sort$experiment))+
     #facet_wrap(~factor(experiment, levels = sort$experiment), ncol = 4)+
     #theme(strip.text.x = element_text(size = 8, face="bold"))
     theme(strip.text.x = element_blank())
@@ -193,7 +214,7 @@ create_ef_plots <- function(rb_cov, mk_cov, output_file)
     theme(plot.title.position = "plot")+
     theme(legend.position = "bottom")+
     theme(legend.title = element_blank())+
-    facet_nested(~ tool + factor(experiment, levels = sort$experiment))+
+    facet_nested(~ factor(experiment, levels = sort$experiment))+
     #facet_wrap(~factor(experiment, levels = sort$experiment), ncol = 4)+
     #theme(strip.text.x = element_text(size = 8, face="bold"))
     theme(strip.text.x = element_blank())
@@ -632,6 +653,15 @@ create_species_abundance_plot <- function(dirlist)
     abundance_report <- bind_rows(abundance_report, yield)
   }
   
+  abundance_report <- abundance_report %>%
+    mutate(experiment = 
+             case_when(experiment == "FAR91003" ~ "ReadBouncer1",
+                       experiment == "FAR92672" ~ "ReadBouncer2",
+                       experiment == "FAR92750" ~ "MinKNOW1",
+                       experiment == "FAP84921" ~ "MinKNOW2",
+                       TRUE ~ experiment)
+          )
+  
   sort <- abundance_report %>%
     select(experiment, date) %>%
     filter(!duplicated(.)) %>%
@@ -770,6 +800,15 @@ create_plasmid_abundance_plot <- function(rb_dirs, mk_dirs, output_file)
     abundance_report <- bind_rows(abundance_report, yield)
   }
   
+  abundance_report <- abundance_report %>%
+    mutate(experiment = 
+             case_when(experiment == "FAR91003" ~ "ReadBouncer1",
+                       experiment == "FAR92672" ~ "ReadBouncer2",
+                       experiment == "FAR92750" ~ "MinKNOW1",
+                       experiment == "FAP84921" ~ "MinKNOW2",
+                       TRUE ~ experiment)
+    )
+  
   sort <- abundance_report %>%
     select(experiment, date) %>%
     filter(!duplicated(.)) %>%
@@ -786,7 +825,7 @@ create_plasmid_abundance_plot <- function(rb_dirs, mk_dirs, output_file)
     theme(legend.position = "top")+
     geom_text(aes(label = paste0(round(100 * perc, 2),"%")), 
               position = position_stack(vjust = 0.5), size = 4)+
-    facet_nested(region ~ tool + factor(experiment, levels = sort$experiment),scales = "free_x")+
+    facet_nested(region ~ factor(experiment, levels = sort$experiment),scales = "free_x")+
     theme(strip.text.x = element_text(size = 10, face="bold"))+
     theme(strip.text.y = element_text(size = 10, face="bold"))+
     theme(strip.background=element_rect(color="grey30"))
@@ -862,11 +901,19 @@ print_active_channel_stats <- function(rb_dirs, mk_dirs, output_file)
     }
   }
   
+  channel_report <- channel_report %>%
+    mutate(experiment = 
+             case_when(experiment == "FAR91003" ~ "ReadBouncer1",
+                       experiment == "FAR92672" ~ "ReadBouncer2",
+                       experiment == "FAR92750" ~ "MinKNOW1",
+                       experiment == "FAP84921" ~ "MinKNOW2",
+                       TRUE ~ experiment)
+           )
+   
   sort <- channel_report %>%
     select(experiment, date) %>%
     filter(!duplicated(.)) %>%
-    arrange(date)
-  
+    arrange(date) 
   
   act <- ggplot(channel_report, aes(x=timepoint, y=channels, color=design)) +
     theme_minimal()+
@@ -883,7 +930,7 @@ print_active_channel_stats <- function(rb_dirs, mk_dirs, output_file)
     theme(plot.title = element_text(size=16))+
     theme(plot.title.position = "plot")+
     theme(legend.title = element_blank())+
-    facet_nested(~tool + factor(experiment, levels = sort$experiment))+
+    facet_nested(~factor(experiment, levels = sort$experiment))+
     theme(strip.text.x = element_text(size = 10, face="bold"))+
     theme(strip.text.y = element_text(size = 10, face="bold"))+
     theme(strip.background=element_rect(color="grey30"))
@@ -901,7 +948,7 @@ print_active_channel_stats <- function(rb_dirs, mk_dirs, output_file)
     theme(plot.title.position = "plot")+
     theme(legend.position = "top")+
     theme(legend.title = element_blank())+
-    facet_nested(~tool + factor(experiment, levels = sort$experiment))+
+    facet_nested(~ factor(experiment, levels = sort$experiment))+
     theme(strip.text.x = element_text(size = 10, face="bold"))+
     theme(strip.text.y = element_text(size = 10, face="bold"))+
     theme(strip.background=element_rect(color="grey30"))
@@ -1059,6 +1106,15 @@ create_read_length_histogram_plots <- function(dirlist)
     control <- bind_rows(control, reduced_control)
   }
   
+  control <- control %>%
+    mutate(experiment = 
+             case_when(experiment == "FAR91003" ~ "ReadBouncer1",
+                       experiment == "FAR92672" ~ "ReadBouncer2",
+                       experiment == "FAR92750" ~ "MinKNOW1",
+                       experiment == "FAP84921" ~ "MinKNOW2",
+                       TRUE ~ experiment)
+          )
+  
   sort <- control %>%
     select(experiment, date) %>%
     filter(!duplicated(.)) %>%
@@ -1107,6 +1163,15 @@ create_read_length_violin_plot <- function(dirlist)
     
     control <- bind_rows(control, reduced_control)
   }
+  
+  control <- control %>%
+    mutate(experiment = 
+             case_when(experiment == "FAR91003" ~ "ReadBouncer1",
+                       experiment == "FAR92672" ~ "ReadBouncer2",
+                       experiment == "FAR92750" ~ "MinKNOW1",
+                       experiment == "FAP84921" ~ "MinKNOW2",
+                       TRUE ~ experiment)
+    )
   
   sort <- control %>%
     select(experiment, date) %>%
