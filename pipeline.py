@@ -76,8 +76,8 @@ def create_fastq(data_dir):
     for filename in glob.glob(csv_dir + "/*.tsv"):
         head, tail = os.path.split(filename)
         newname = os.path.splitext(tail)[0]
-        barcode = str(tail[4:6])
-        cmd = ["scripts/fq_from_tsv.py", "-b", barcode, "-o", fastq_dir + "/" + newname + ".fastq.gz", "-s", filename, "-d", data_dir + "/fastq"]
+        barcode = str(tail[0:6])
+        cmd = ["scripts/fq_from_tsv.py", "-i", fastq_dir + "/" + barcode + ".fastq.gz", "-o", fastq_dir + "/" + newname + ".fastq.gz", "-s", filename, "-u", fastq_dir + "/Unclassified.fastq.gz"]
         #commands.append(cmd)
         #print(cmd)
         #subprocess.run(cmd)
@@ -99,8 +99,8 @@ def create_fastq(data_dir):
         for filename in glob.glob(dir + "/*.tsv"):
             head, tail = os.path.split(filename)
             newname = os.path.splitext(tail)[0]
-            barcode = str(tail[4:6])
-            cmd = ["scripts/fq_from_tsv.py", "-b", barcode, "-o", out_dir + "/" + newname + ".fastq.gz", "-s", filename, "-d", data_dir + "/fastq"]
+            barcode = str(tail[0:6])
+            cmd = ["scripts/fq_from_tsv.py", "-i", fastq_dir + "/" + barcode + ".fastq.gz", "-o", out_dir + "/" + newname + ".fastq.gz", "-s", filename, "-u", fastq_dir + "/Unclassified.fastq.gz"]
             #print(cmd)
             #subprocess.run(cmd)
             commands.append(cmd)
@@ -493,10 +493,10 @@ def map_unblocked_plasmid2chromosome(data_dir, genome_dir):
 
 def prepare_data(dir):
 
-#    for zipped in glob.glob(dir + "/*.tar.gz"):                
-#        file = tarfile.open(zipped)
-#        file.extractall(dir + "/.")
-#        file.close()
+    for zipped in glob.glob(dir + "/*.tar.gz"):                
+        file = tarfile.open(zipped)
+        file.extractall(dir + "/.")
+        file.close()
 
     parse_sample_sheet(dir)
 
@@ -574,9 +574,9 @@ def main():
     for data_folder in glob.glob(data_dir + "/20220321*"):
         print(data_folder)
         prepare_data(data_folder)
-        return
         create_tsv_rd_length_plot(data_folder)
         create_fastq(data_folder)
+        return
         map_reads(data_folder, genome_dir)
         create_per_read_mappings(data_folder)
         create_unblocked_plasmid_fastq_files(data_folder)
