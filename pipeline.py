@@ -8,6 +8,7 @@ import glob
 import os
 import csv
 import pysam
+import wget
 import threading
 import tarfile
 import gzip
@@ -19,6 +20,7 @@ from Bio.SeqRecord import SeqRecord
 barcodes = {}
 plasmids = {}
 chromosomes = {}
+sra = {}
 min_read_length = 1000
 
 class ThreadPool(object):
@@ -49,6 +51,9 @@ def parse_sample_sheet(data_dir):
     with open(data_dir + "/sample_sheet.csv", newline='') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=',')
         for row in reader:
+            sra[row['Barcode']] = row['SRA']
+            if row['Barcode'] == "Unclassified":
+                continue
             barcodes[row['Barcode']] = row['Reference']
             for pl in row['Plasmids'].split(";"):
                 plasmids[pl] = row['Reference']
@@ -138,7 +143,7 @@ def create_bam(genome_dir, refname, filename, aln_dir, channels):
 
 def map_reads(data_dir, genome_dir):
 
-    catcommand = ["cat", data_dir + "/fastq/fail/*/*.fastq.gz", data_dir + "/fastq/pass/*/*.fastq.gz", ">", data_dir + "/fastq/all.fastq.gz"]
+    catcommand = ["cat", data_dir + "/fastq/*.fastq.gz", ">", data_dir + "/fastq/all.fastq.gz"]
     subprocess.run(catcommand)
 
     aln_dir = data_dir + "/alignment"
@@ -487,18 +492,47 @@ def map_unblocked_plasmid2chromosome(data_dir, genome_dir):
                                     if r!=1: print('Error while writing sequence:  ' + new_record.id)
 
 def prepare_data(dir):
-    for zipped in glob.glob(dir + "/*.tar.gz"):                
-        file = tarfile.open(zipped)
-        file.extractall(dir + "/.")
-        file.close()
+
+#    for zipped in glob.glob(dir + "/*.tar.gz"):                
+#        file = tarfile.open(zipped)
+#        file.extractall(dir + "/.")
+#        file.close()
+
+    parse_sample_sheet(dir)
+
+    fastq_dir = dir + "/fastq"
+    if not os.path.exists(fastq_dir):
+        os.mkdir(fastq_dir)
+
+    for bc in sra.keys():
+        if bc == "RBK401" or bc == "RBK402":
+            continue
+        cmd = ["prefetch",sra[bc]]
+        subprocess.run(cmd)
+        cmd = ["fastq-dump", "--outdir", fastq_dir, "--gzip", sra[bc] + "/" + sra[bc] + ".sra"]
+        subprocess.run(cmd)
+        os.rename(fastq_dir + "/" + sra[bc] + ".fastq.gz", fastq_dir + "/" + bc + ".fastq.gz")
+
 
 def storeRefSeqFasta(output_file, records):
-    with gzip.open(output_file, 'wt') as f_out:
+    with open(output_file, 'wt') as f_out:
         for rec in records:
             r=SeqIO.write(rec, f_out, 'fasta')
             if r!=1: print('Error while writing sequence:  ' + rec.id)
 
 def get_reference_genomes(dir):
+
+    orgs = {}
+
+    with open(dir + "/references.csv", newline='') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=',')
+        for row in reader:
+            r = {}
+            r['name'] = row['name']
+            r['chromosome'] = row['chromosome'].split(";")
+            r['plasmids'] = row['plasmids'].split(";")
+            orgs[row['ID']] = r
+
 
     genome_dir = dir + "/Genomes"
     if not os.path.exists(genome_dir):
@@ -506,11 +540,7 @@ def get_reference_genomes(dir):
 
     Entrez.email = "jensenuk83@gmail.com"
     for sp in orgs:
-        newdir = data_dir + "/" + sp
-        if not os.path.exists(newdir):
-            os.mkdir(newdir)
         # create chromosome ref seq file
-        #handle = Entrez.efetch(db="nucleotide", id=orgs[sp]['chromosome'],rettype="fasta", retmode="text")
         records = []
         for ch in orgs[sp]['chromosome']:
             handle = Entrez.efetch(db="nucleotide", id=ch,rettype="fasta", retmode="text")
@@ -518,36 +548,42 @@ def get_reference_genomes(dir):
                 records.append(record)
             handle.close()
 
+        storeRefSeqFasta(genome_dir + "/" + orgs[sp]['name'] + "_chromosome.fasta", records)
+        plasmids = []
         # create plasmid ref seq file
         for pl in orgs[sp]['plasmids']:
             handle = Entrez.efetch(db="nucleotide", id=pl,rettype="fasta", retmode="text")
-            records.append(SeqIO.read(handle, "fasta"))
+            plasmids.append(SeqIO.read(handle, "fasta"))
             handle.close()
-        storeRefSeqFasta(newdir + "/Reference.fasta.gz", records)
-    
-    # TODO: Download reference genome fasta files
+        storeRefSeqFasta(genome_dir + "/" + orgs[sp]['name'] + "_plasmid.fasta", plasmids)
+
+        for r in plasmids:
+            records.append(r)
+
+        storeRefSeqFasta(genome_dir + "/" + orgs[sp]['name'] + ".fasta", records)
+    return genome_dir
 
 def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir", help="Data directory", type=str)
     args = parser.parse_args()
-
-    get_reference_genomes(args.data_dir)
-
+ 
+    genome_dir = get_reference_genomes(args.data_dir)
     data_dir = args.data_dir
-    for data_folder in glob.glob(data_dir + "/20220*"):
+    for data_folder in glob.glob(data_dir + "/20220321*"):
         print(data_folder)
-        parse_sample_sheet(data_folder)
+        prepare_data(data_folder)
+        return
         create_tsv_rd_length_plot(data_folder)
         create_fastq(data_folder)
-        map_reads(data_folder, "/media/jens/INTENSO/Plasmide/Genomes")
+        map_reads(data_folder, genome_dir)
         create_per_read_mappings(data_folder)
         create_unblocked_plasmid_fastq_files(data_folder)
-        map_unblocked_plasmid2chromosome(data_folder, "/media/jens/INTENSO/Plasmide/Genomes")
-        create_depth_report(data_folder, "/media/jens/INTENSO/Plasmide/Genomes")
+        map_unblocked_plasmid2chromosome(data_folder, genome_dir)
+        create_depth_report(data_folder, genome_dir)
         create_enrichment_plot(data_folder)
-        assemble_reads(data_folder, "/media/jens/INTENSO/Plasmide/Genomes")
+        assemble_reads(data_folder, genome_dir)
         combine_quast_output(data_folder)
 #    combine_experiment_plots("media/jens/INTENSO/Plasmide")
 
