@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from genericpath import exists
+import argparse
 import shutil
 import subprocess
 import glob
@@ -8,8 +9,9 @@ import os
 import csv
 import pysam
 import threading
+import tarfile
 import gzip
-from Bio import SeqIO
+from Bio import SeqIO, Entrez
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord 
 
@@ -17,7 +19,7 @@ from Bio.SeqRecord import SeqRecord
 barcodes = {}
 plasmids = {}
 chromosomes = {}
-min_read_length = 1500
+min_read_length = 1000
 
 class ThreadPool(object):
     def __init__(self):
@@ -399,12 +401,12 @@ def create_unblocked_plasmid_fastq_files(data_dir):
 
 
 #def combine_experiment_plots(plasmid_dir):
-    #result_dir = plasmid_dir + "/results/"
-    #cov_report_file = result_dir +  "coverage_report.csv"
-    #seq_summary_file = (glob.glob(data_dir + "/sequencing_summary_*.txt"))[0]
-    #cmd = ["Rscript", "scripts/enrichment_plot.R", "--data_dir", data_dir, "--output_dir", result_dir]
-    #print(cmd)
-    #subprocess.run(cmd)
+#    result_dir = plasmid_dir + "/results/"
+#    cov_report_file = result_dir +  "coverage_report.csv"
+#    seq_summary_file = (glob.glob(data_dir + "/sequencing_summary_*.txt"))[0]
+#    cmd = ["Rscript", "scripts/enrichment_plot.R", "--data_dir", data_dir, "--output_dir", result_dir]
+#    print(cmd)
+#    subprocess.run(cmd)
 
 def map_unblocked_plasmid2chromosome(data_dir, genome_dir):
 
@@ -484,12 +486,57 @@ def map_unblocked_plasmid2chromosome(data_dir, genome_dir):
                                     r=SeqIO.write(new_record, f_out, 'fasta')
                                     if r!=1: print('Error while writing sequence:  ' + new_record.id)
 
-                
+def prepare_data(dir):
+    for zipped in glob.glob(dir + "/*.tar.gz"):                
+        file = tarfile.open(zipped)
+        file.extractall(dir + "/.")
+        file.close()
 
+def storeRefSeqFasta(output_file, records):
+    with gzip.open(output_file, 'wt') as f_out:
+        for rec in records:
+            r=SeqIO.write(rec, f_out, 'fasta')
+            if r!=1: print('Error while writing sequence:  ' + rec.id)
+
+def get_reference_genomes(dir):
+
+    genome_dir = dir + "/Genomes"
+    if not os.path.exists(genome_dir):
+        os.mkdir(genome_dir)
+
+    Entrez.email = "jensenuk83@gmail.com"
+    for sp in orgs:
+        newdir = data_dir + "/" + sp
+        if not os.path.exists(newdir):
+            os.mkdir(newdir)
+        # create chromosome ref seq file
+        #handle = Entrez.efetch(db="nucleotide", id=orgs[sp]['chromosome'],rettype="fasta", retmode="text")
+        records = []
+        for ch in orgs[sp]['chromosome']:
+            handle = Entrez.efetch(db="nucleotide", id=ch,rettype="fasta", retmode="text")
+            for record in list(SeqIO.parse(handle, "fasta")):
+                records.append(record)
+            handle.close()
+
+        # create plasmid ref seq file
+        for pl in orgs[sp]['plasmids']:
+            handle = Entrez.efetch(db="nucleotide", id=pl,rettype="fasta", retmode="text")
+            records.append(SeqIO.read(handle, "fasta"))
+            handle.close()
+        storeRefSeqFasta(newdir + "/Reference.fasta.gz", records)
+    
+    # TODO: Download reference genome fasta files
 
 def main():
-    data_dir = "/media/jens/INTENSO/Plasmide/Data"
-    for data_folder in glob.glob(data_dir + "/20220324*"):
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data_dir", help="Data directory", type=str)
+    args = parser.parse_args()
+
+    get_reference_genomes(args.data_dir)
+
+    data_dir = args.data_dir
+    for data_folder in glob.glob(data_dir + "/20220*"):
         print(data_folder)
         parse_sample_sheet(data_folder)
         create_tsv_rd_length_plot(data_folder)
@@ -502,7 +549,7 @@ def main():
         create_enrichment_plot(data_folder)
         assemble_reads(data_folder, "/media/jens/INTENSO/Plasmide/Genomes")
         combine_quast_output(data_folder)
-    combine_experiment_plots("media/jens/INTENSO/Plasmide")
+#    combine_experiment_plots("media/jens/INTENSO/Plasmide")
 
 if __name__ == "__main__":
     main()
