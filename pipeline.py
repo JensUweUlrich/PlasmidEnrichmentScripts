@@ -535,6 +535,8 @@ def get_reference_genomes(dir):
 
 
     genome_dir = dir + "/Genomes"
+    return genome_dir
+    
     if not os.path.exists(genome_dir):
         os.mkdir(genome_dir)
 
