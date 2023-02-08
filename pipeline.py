@@ -573,12 +573,11 @@ def main():
  
     genome_dir = get_reference_genomes(args.data_dir)
     data_dir = args.data_dir
-    for data_folder in glob.glob(data_dir + "/20220321*"):
+    for data_folder in glob.glob(data_dir + "/2022*"):
         print(data_folder)
         prepare_data(data_folder)
         create_tsv_rd_length_plot(data_folder)
         create_fastq(data_folder)
-        return
         map_reads(data_folder, genome_dir)
         create_per_read_mappings(data_folder)
         create_unblocked_plasmid_fastq_files(data_folder)
@@ -587,7 +586,7 @@ def main():
         create_enrichment_plot(data_folder)
         assemble_reads(data_folder, genome_dir)
         combine_quast_output(data_folder)
-#    combine_experiment_plots("media/jens/INTENSO/Plasmide")
+    combine_experiment_plots("media/jens/INTENSO/Plasmide")
 
 if __name__ == "__main__":
     main()
