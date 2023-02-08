@@ -70,15 +70,15 @@ def create_tsv_rd_length_plot(data_dir):
 def create_fastq(data_dir):
     csv_dir = data_dir + "/csv"
     fastq_dir = data_dir + "/fastq"
-    #if not os.path.exists(fastq_dir):
-    #    os.mkdir(fastq_dir)
+    if not os.path.exists(fastq_dir):
+        os.mkdir(fastq_dir)
     commands = []
     for filename in glob.glob(csv_dir + "/*.tsv"):
         head, tail = os.path.split(filename)
         newname = os.path.splitext(tail)[0]
         barcode = str(tail[0:6])
         cmd = ["scripts/fq_from_tsv.py", "-i", fastq_dir + "/" + barcode + ".fastq.gz", "-o", fastq_dir + "/" + newname + ".fastq.gz", "-s", filename, "-u", fastq_dir + "/Unclassified.fastq.gz"]
-        #commands.append(cmd)
+        commands.append(cmd)
         #print(cmd)
         #subprocess.run(cmd)
 
